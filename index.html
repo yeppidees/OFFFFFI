@@ -12,7 +12,7 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* 상단 바 */
+        /* 헤더 */
         .header { background: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--primary); flex-shrink: 0; }
         .finance-bar { background: #fff; padding: 10px 20px; font-size: 0.85rem; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; color: #ff8fab; font-weight: bold; }
         
@@ -34,22 +34,28 @@
         .name-input { border: none; background: transparent; font-weight: bold; font-size: 1.05rem; width: 100%; color: var(--text); outline: none; padding: 2px; }
         .name-input:hover { background: #fff0f3; border-radius: 5px; }
 
-        /* 스탯(4종) 및 동호회 */
+        /* 스탯 */
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.65rem; margin-top: 10px; }
         .stat-bar { height: 4px; background: #eee; border-radius: 2px; overflow: hidden; margin-top: 2px; }
         .stat-fill { height: 100%; transition: 0.5s; }
         .club-tag { display: inline-block; padding: 2px 8px; border-radius: 20px; background: var(--point); font-size: 0.6rem; margin-top: 5px; font-weight: bold; color: #55a35d; }
 
-        /* 로그 (아래에서 위로 자동 스크롤) */
-        .log-sidebar { background: white; border-left: 1px solid #eee; display: flex; flex-direction: column; width: 100%; height: 280px; }
+        /* 로그 스타일 강화 */
+        .log-sidebar { background: white; border-left: 1px solid #eee; display: flex; flex-direction: column; width: 100%; height: 300px; }
         @media (min-width: 900px) { .log-sidebar { width: 420px; height: auto; } }
         .log-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .log-entry { padding: 10px; border-radius: 12px; font-size: 0.85rem; background: #fff9fa; border-left: 4px solid var(--primary); animation: slideUp 0.3s ease-out; line-height: 1.4; }
-        .log-urgent { background: #fff1f1; border-left-color: #ff8787; font-weight: bold; }
+        
+        .log-entry { padding: 10px; border-radius: 12px; font-size: 0.85rem; background: #fff9fa; border-left: 5px solid var(--primary); animation: slideUp 0.3s ease-out; line-height: 1.4; }
+        
+        /* 로그 타입별 색상 */
+        .log-behavior { color: #888; border-left-color: #eee !important; font-size: 0.8rem; }
+        .log-good { border-left-color: #a3e635 !important; font-weight: bold; }
+        .log-bad { border-left-color: #fb7185 !important; font-weight: bold; }
+        .log-urgent-good { background: #f0fdf4; border-left-color: #22c55e !important; color: #166534; font-weight: bold; border-width: 8px; }
+        .log-urgent-bad { background: #fef2f2; border-left-color: #ef4444 !important; color: #991b1b; font-weight: bold; border-width: 8px; }
 
-        /* 관계 리스트 */
         .rel-item { background: white; padding: 12px; border-radius: 18px; border-left: 6px solid var(--accent); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .rel-bad { border-left-color: #ffb3b3; color: #d63031; }
+        .rel-bad { border-left-color: #ffb3b3; color: #d63031; font-weight: bold; }
 
         /* 모달 */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 3000; backdrop-filter: blur(5px); }
@@ -57,6 +63,7 @@
         select, input[type="text"] { width: 100%; padding: 12px; margin: 8px 0; border-radius: 12px; border: 1px solid #eee; }
         .btn { padding: 14px; border-radius: 15px; border: none; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
         .btn-main { background: var(--primary); color: white; }
+        @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
 <body>
@@ -84,7 +91,7 @@
     <div class="content-area">
         <div id="p-emp" class="page active">
             <div id="eGrid" class="grid"></div>
-            <div id="emptyMsg" style="text-align:center; margin-top:100px; color:#ccc;">사원이 0명입니다. 채용을 시작하세요!</div>
+            <div id="emptyMsg" style="text-align:center; margin-top:100px; color:#ccc;">사원을 영입하고 '하루 진행'을 눌러보세요!</div>
         </div>
         <div id="p-rel" class="page"><div id="rList"></div></div>
         <div id="p-sys" class="page">
@@ -94,16 +101,16 @@
         </div>
     </div>
     <div class="log-sidebar">
-        <div style="padding:15px; font-weight:bold; color:var(--primary); border-bottom:1px solid #eee;">🎀 실시간 오피스 로그</div>
+        <div style="padding:15px; font-weight:bold; color:var(--primary); border-bottom:1px solid #eee; background:#fdfdfd;">🎀 실시간 타임라인 (이벤트 빈도 UP)</div>
         <div id="lBox" class="log-container"></div>
     </div>
 </div>
 
 <div id="mOv" class="modal-overlay" onclick="clM()"><div class="modal" onclick="event.stopPropagation()">
-    <h3 id="mTitle" style="color:var(--primary); margin:0;">사원 정보 수정</h3>
+    <h3 id="mTitle" style="color:var(--primary); margin:0;">상세 정보 수정</h3>
     <div style="margin-top:15px;">이름 수정: <input type="text" id="editName"></div>
     <div style="padding:15px; background:#fdfafb; border-radius:18px; margin-top:10px;">
-        <strong>⚔️ 승진 배틀 (하극상 가능)</strong><br>
+        <strong>⚔️ 승진 배틀 (하극상)</strong><br>
         상대: <select id="btlSel"></select>
         <button onclick="startBattle()" class="btn btn-main">결투 시작</button>
     </div>
@@ -113,7 +120,7 @@
         타입: <select id="relType"></select>
         <button onclick="manualRel()" class="btn" style="background:#8a70d6; color:white;">관계 확정</button>
     </div>
-    <button onclick="deleteEmp(selId)" class="btn" style="background:var(--danger); color:white; margin-top:15px;">수동 해고(완전 삭제)</button>
+    <button onclick="deleteEmp(selId)" class="btn" style="background:var(--danger); color:white; margin-top:15px;">수동 해고(삭제)</button>
     <button onclick="clM()" class="btn" style="background:#eee;">닫기</button>
 </div></div>
 
@@ -129,64 +136,60 @@
 
     function hire() {
         const name = LN[Math.floor(Math.random()*10)] + FN[Math.floor(Math.random()*10)];
-        st.e.push({ 
-            id:Date.now()+Math.random(), n:name, rIdx:0, 
-            tech:50, sale:50, mtl:50, hp:50, 
-            trait:TRAITS[Math.floor(Math.random()*6)], isFired:false, club:null 
-        });
+        st.e.push({ id:Date.now()+Math.random(), n:name, rIdx:0, tech:50, sale:50, mtl:50, hp:50, trait:TRAITS[Math.floor(Math.random()*6)], isFired:false, club:null });
         document.getElementById('emptyMsg').style.display = 'none';
-        uUI(); log(`🌸 <b>${name}</b>님이 신입 사원으로 채용되었습니다.`);
+        uUI(); log(`🌸 <b>${name}</b>님이 신입으로 채용되었습니다.`, "log-good");
     }
 
     function next() {
         if(st.over) return;
-        st.d++; let rev = 0, exp = 0;
+        st.d++; 
+        let rev = 0, exp = 0;
         
         st.e.forEach(e => {
             if(e.isFired) return;
             rev += (e.tech * 1.8) + (e.sale * 2.3);
             exp += SALARY[e.rIdx];
 
-            // 실시간 행동 로직
             const roll = Math.random();
-            if(roll < 0.1) log(`☕ [행동] <b>${e.n}</b>님이 탕비실에서 커피를 마시며 휴식합니다.`);
-            else if(roll < 0.15) log(`📖 [행동] <b>${e.n}</b>님이 업무 관련 전문 서적을 탐독합니다.`);
-            
-            if(e.trait === "천재" && roll < 0.1) { e.tech += 4; log(`💡 [성격] 천재 <b>${e.n}</b>님이 혁신적인 알고리즘을 제안했습니다!`); }
-            if(e.trait === "게으름" && roll < 0.12) { rev -= 6000; log(`😴 [성격] <b>${e.n}</b>님이 몰래 유튜브를 보다가 적발되었습니다.`); }
-            if(e.trait === "트러블메이커" && roll < 0.05) { st.m -= 20000; log(`👿 [성격] <b>${e.n}</b>님이 다른 부서와 큰 마찰을 빚었습니다! (-20,000)`); }
-            
-            // 상호작용 및 관계 형성
-            if(roll < 0.12) autoRel(e);
+            // 1. 일상 행동 로그 (자주 뜸)
+            if(roll < 0.15) log(`☕ <b>${e.n}</b>님이 믹스커피를 마시며 멍을 때립니다.`, "log-behavior");
+            else if(roll < 0.2) log(`🛋️ <b>${e.n}</b>님이 잠시 휴게실에서 휴식을 취합니다.`, "log-behavior");
 
-            // 동호회 로직
-            if(e.trait === "사교가" && !e.club && roll < 0.06) {
-                const clubs = ["볼링클럽", "와인동호회", "스터디모임", "낚시왕"];
-                e.club = clubs[Math.floor(Math.random()*4)];
-                log(`🎨 [동호회] <b>${e.n}</b>님이 '${e.club}'을(를) 개설했습니다.`);
+            // 2. 성격/스탯 로직
+            if(e.trait === "천재" && roll < 0.1) { e.tech += 5; log(`💡 <b>${e.n}</b>님이 기가 막힌 아이디어를 냈습니다!`, "log-good"); }
+            if(e.trait === "트러블메이커" && roll < 0.08) { st.m -= 10000; log(`👿 <b>${e.n}</b>님이 팀원과 말다툼을 벌였습니다. (-10,000)`, "log-bad"); }
+            
+            // 3. 관계 및 동호회
+            if(roll < 0.15) autoRel(e);
+            if(e.trait === "사교가" && !e.club && roll < 0.05) {
+                e.club = ["등산회", "맛지도", "볼링클럽"][Math.floor(Math.random()*3)];
+                log(`🎨 <b>${e.n}</b>님이 '${e.club}' 동호회를 만들었습니다.`);
             }
-            if(e.club) exp += 1500; // 유지비
+            if(e.club) exp += 1500;
         });
 
-        // 긴급 이벤트 (불륜 포함)
-        if(Math.random() < 0.09) {
+        // 4. ★ 초강력 회사 이벤트 (확률 25%) ★
+        if(Math.random() < 0.25) {
             const evts = [
-                {t:"🚀 혁신 기술 투자 유치!", m:100000}, {t:"💸 대규모 세무 조사 착수!", m:-50000},
-                {t:"💔 사내 불륜 스캔들 폭로!", m:-30000}, {t:"📉 원자재 가격 급등!", m:-20000},
-                {t:"🌟 역대급 실적 달성!", m:60000}
+                {t:"🚀 [투자] 엔젤 투자자로부터 거액의 투자를 받았습니다!", m:150000, c:"log-urgent-good"},
+                {t:"💸 [세무] 세무 조사 결과 세금이 추가 징수됩니다!", m:-70000, c:"log-urgent-bad"},
+                {t:"💔 [스캔들] 사내 불륜 사실이 사내 메신저에 퍼졌습니다!", m:-50000, c:"log-urgent-bad"},
+                {t:"💻 [해킹] 서버가 공격받아 복구 비용이 발생합니다!", m:-40000, c:"log-urgent-bad"},
+                {t:"🌟 [대박] 회사 제품이 SNS에서 입소문을 탔습니다!", m:80000, c:"log-urgent-good"}
             ];
             const ev = evts[Math.floor(Math.random()*evts.length)];
-            st.m += ev.m; log(`📢 [긴급] ${ev.t} (${ev.m > 0 ? '+':''}${ev.m.toLocaleString()})`, "log-urgent");
+            st.m += ev.m;
+            log(ev.t, ev.c);
         }
 
-        // 자동 해고 시스템 (성과 하위자 회색 처리)
+        // 정산 및 파산
+        st.m = st.m + rev - exp;
         if(st.m < exp) {
             const targets = st.e.filter(x=>!x.isFired).sort((a,b)=>(a.tech+a.sale)-(b.tech+b.sale));
-            if(targets[0]) { targets[0].isFired = true; log(`⚠️ [재정악화] 자금 부족으로 <b>${targets[0].n}</b>님이 자동 해고(회색처리)되었습니다.`); }
+            if(targets[0]) { targets[0].isFired = true; log(`⚠️ <b>${targets[0].n}</b>님이 자금 부족으로 회색 해고되었습니다.`, "log-bad"); }
         }
-
-        st.m = st.m + rev - exp;
-        if(st.m <= 0) { st.over = true; alert("회사가 파산했습니다. (엔딩)"); toggleAuto(); }
+        if(st.m <= 0) { st.over = true; log("❌ 회사가 파산했습니다. 게임 종료.", "log-urgent-bad"); alert("파산 엔딩!"); toggleAuto(); }
         uUI();
     }
 
@@ -196,8 +199,7 @@
             const p2 = others[Math.floor(Math.random()*others.length)];
             const t = RELS[Math.floor(Math.random()*RELS.length)];
             st.r[[p1.id, p2.id].sort().join('-')] = t;
-            if(t === "불륜") log(`🔥 [스캔들] <b>${p1.n}</b> & <b>${p2.n}</b>님이 은밀한 관계인 듯합니다...`);
-            else log(`✨ [관계] <b>${p1.n}</b> & <b>${p2.n}</b>님이 <b>'${t}'</b> 관계가 되었습니다.`);
+            if(t === "불륜") log(`🔥 [스캔들] <b>${p1.n}</b> & <b>${p2.n}</b>님의 사이가 수상합니다.`, "log-bad");
         }
     }
 
@@ -207,14 +209,14 @@
         document.getElementById('eGrid').innerHTML = st.e.map(e => `
             <div class="card ${e.isFired?'fired':''}" onclick="opM(${e.id})">
                 <small style="color:var(--primary); font-weight:bold;">${RANKS[e.rIdx]}</small>
-                <input class="name-input" value="${e.n}" onchange="st.e.find(x=>x.id==${e.id}).n=this.value" onclick="event.stopPropagation()" title="클릭하여 이름 수정">
+                <input class="name-input" value="${e.n}" onchange="st.e.find(x=>x.id==${e.id}).n=this.value" onclick="event.stopPropagation()">
                 <small style="color:#aaa; display:block;">${e.trait}</small>
                 ${e.club ? `<div class="club-tag">${e.club}</div>` : ''}
                 <div class="stat-grid">
                     <div>T ${bar(e.tech, 'var(--primary)')}</div><div>S ${bar(e.sale, 'var(--secondary)')}</div>
                     <div>M ${bar(e.mtl, 'var(--accent)')}</div><div>H ${bar(e.hp, 'var(--point)')}</div>
                 </div>
-            </div>`).join('') + `<div class="card" onclick="hire()" style="border:2px dashed #ddd; display:flex; justify-content:center; align-items:center; color:#ccc; font-weight:bold;">+ 사원 영입</div>`;
+            </div>`).join('') + `<div class="card" onclick="hire()" style="border:2px dashed #ddd; display:flex; justify-content:center; align-items:center; color:#ccc; font-weight:bold;">+ 사원 채용</div>`;
 
         let rH = ""; for(let k in st.r) {
             let ids=k.split('-'); let e1=st.e.find(x=>x.id==ids[0]), e2=st.e.find(x=>x.id==ids[1]);
@@ -223,35 +225,32 @@
                 rH += `<div class="rel-item ${isAffair?'rel-bad':''}"><b>${e1.n} ＆ ${e2.n}</b> <span>${st.r[k]}</span></div>`;
             }
         }
-        document.getElementById('rList').innerHTML = rH || "<p style='text-align:center; color:#ccc; margin-top:50px;'>관계 데이터가 없습니다.</p>";
+        document.getElementById('rList').innerHTML = rH || "관계 없음";
     }
 
     function bar(v, c) { return `<div class="stat-bar"><div class="stat-fill" style="width:${Math.min(v,100)}%; background:${c}"></div></div>`; }
     function log(m, c="") { const b = document.getElementById('lBox'); const d = document.createElement('div'); d.className = `log-entry ${c}`; d.innerHTML = `<small>Day ${st.d}</small><br>${m}`; b.appendChild(d); b.scrollTop = b.scrollHeight; }
-    
     function opM(id) { 
         selId=id; const e=st.e.find(x=>x.id===id); if(e.isFired) return; 
         document.getElementById('editName').value=e.n;
-        const others = st.e.filter(x=>x.id!==id && !x.isFired).map(x=>`<option value="${x.id}">${x.n}</option>`).join('');
-        document.getElementById('btlSel').innerHTML = others; document.getElementById('relSel').innerHTML = others;
+        const o = st.e.filter(x=>x.id!==id && !x.isFired).map(x=>`<option value="${x.id}">${x.n}</option>`).join('');
+        document.getElementById('btlSel').innerHTML = o; document.getElementById('relSel').innerHTML = o;
         document.getElementById('relType').innerHTML = RELS.map(r=>`<option value="${r}">${r}</option>`).join('');
         document.getElementById('mOv').style.display='block'; 
     }
-    
     function applyEdit() { st.e.find(x=>x.id===selId).n = document.getElementById('editName').value; clM(); uUI(); }
     function clM() { document.getElementById('mOv').style.display='none'; }
-    function deleteEmp(id) { st.e = st.e.filter(x=>x.id!==id); clM(); uUI(); log("🚮 수동 해고로 데이터가 영구 삭제되었습니다."); }
+    function deleteEmp(id) { st.e = st.e.filter(x=>x.id!==id); clM(); uUI(); log("🚮 수동 해고 완료."); }
     function startBattle() { 
         let p1=st.e.find(x=>x.id===selId), p2=st.e.find(x=>x.id==document.getElementById('btlSel').value);
-        if((p1.tech+p1.sale) > (p2.tech+p2.sale)) { p1.rIdx=Math.min(7, p1.rIdx+1); p2.rIdx=Math.max(0, p2.rIdx-1); log(`⚔️ [배틀] <b>${p1.n}</b> 승리! 승진했습니다.`, "log-urgent"); }
-        else { log(`⚔️ [배틀] <b>${p1.n}</b> 패배... 승진에 실패했습니다.`); }
+        if((p1.tech+p1.sale) > (p2.tech+p2.sale)) { p1.rIdx=Math.min(7, p1.rIdx+1); p2.rIdx=Math.max(0, p2.rIdx-1); log(`⚔️ [배틀] <b>${p1.n}</b> 승리!`, "log-urgent-good"); }
+        else { log(`⚔️ [배틀] <b>${p1.n}</b> 패배...`); }
         clM(); uUI(); 
     }
-    function manualRel() { st.r[[selId, document.getElementById('relSel').value].sort().join('-')] = document.getElementById('relType').value; clM(); uUI(); log("✨ 관계를 수동으로 설정했습니다."); }
+    function manualRel() { st.r[[selId, document.getElementById('relSel').value].sort().join('-')] = document.getElementById('relType').value; clM(); uUI(); log("✨ 관계 설정 완료."); }
     function toggleAuto() { if(autoInt) { clearInterval(autoInt); autoInt=null; document.getElementById('autoBtn').innerText="자동 시작"; } else { autoInt=setInterval(next, 1200); document.getElementById('autoBtn').innerText="중지"; } }
     function tab(t) { document.querySelectorAll('.page, .nav button').forEach(x=>x.classList.remove('active')); document.getElementById(`p-${t}`).classList.add('active'); document.getElementById(`n-${t}`).classList.add('active'); }
-    function saveData(t) { let d=t==='HR'?st.e:st.m; let b=new Blob([JSON.stringify(d)],{type:'application/json'}); let a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`${t}_DATA.json`; a.click(); }
-    
+    function saveData(t) { let b=new Blob([JSON.stringify(t==='HR'?st.e:st.m)],{type:'application/json'}); let a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`${t}.json`; a.click(); }
     uUI();
 </script>
 </body>
