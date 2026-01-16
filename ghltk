@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>회사 경영 시뮬레이션</title>
+    <style>
+        :root { 
+            --bg: #fdfaf5; /* 편안한 웜 화이트 */
+            --card: #ffffff;
+            --primary: #ffb7b2; /* 파스텔 핑크 */
+            --secondary: #b2e2f2; /* 파스텔 블루 */
+            --accent: #b2b2e6; /* 파스텔 퍼플 */
+            --point: #b2f2bb; /* 파스텔 그린 */
+            --text: #5d5d5d; /* 진한 회색 (눈 보호) */
+            --danger: #ff9aa2; /* 부드러운 레드 */
+            --fired: #e0e0e0; /* 해고 시 회색 처리 */
+            --sidebar: #f7f3ed; /* 타임라인 배경 */
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
+        body { background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* 헤더 & 대시보드 */
+        .header { background: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--primary); z-index: 10; }
+        .finance-bar { background: #fffdf9; padding: 12px 20px; font-size: 0.95rem; display: flex; justify-content: space-around; font-weight: bold; color: #888; border-bottom: 1px solid #f0ede8; }
+        
+        /* 네비게이션 */
+        .nav { display: flex; background: white; padding: 5px; gap: 5px; border-bottom: 1px solid #eee; }
+        .nav button { flex: 1; padding: 12px; border: none; background: none; border-radius: 12px; font-weight: bold; color: #bbb; cursor: pointer; transition: 0.3s; }
+        .nav button.active { background: var(--primary); color: white; }
+
+        .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        @media (min-width: 1024px) { .main-wrapper { flex-direction: row; } }
+        
+        /* 메인 콘텐츠 */
+        .content-area { flex: 1; padding: 20px; overflow-y: auto; }
+        .page { display: none; } .page.active { display: block; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; }
+        
+        /* 사원 카드 (파스텔 테두리) */
+        .card { background: var(--card); padding: 22px; border-radius: 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.03); border: 2px solid #f0f0f0; transition: 0.3s; position: relative; overflow: hidden; }
+        .card::before { content: ""; position: absolute; top: 0; left: 0; width: 6px; height: 100%; background: var(--secondary); }
+        .card.fired { background: var(--fired); filter: grayscale(1); opacity: 0.6; border-color: #ddd; }
+        .card.fired::before { background: #aaa; }
+        .card:not(.fired):hover { transform: translateY(-5px); border-color: var(--primary); }
+
+        .rank-label { font-size: 0.75rem; background: var(--accent); color: white; padding: 3px 10px; border-radius: 50px; font-weight: bold; }
+        .name-input { border: 1px solid #f0f0f0; background: #fafafa; font-weight: 800; font-size: 1.2rem; width: 100%; padding: 10px; border-radius: 12px; margin: 12px 0; outline: none; color: var(--text); }
+
+        /* 스탯 */
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .stat-item { font-size: 0.75rem; font-weight: bold; color: #888; }
+        .bar-bg { width: 100%; height: 8px; background: #f0f0f0; border-radius: 10px; overflow: hidden; margin-top: 5px; }
+        .bar-fill { height: 100%; transition: 1s ease-in-out; }
+
+        /* ✨ 파스텔 타임라인 */
+        .log-sidebar { background: var(--sidebar); display: flex; flex-direction: column; width: 100%; height: 40%; border-top: 3px solid #e9e0d5; }
+        @media (min-width: 1024px) { .log-sidebar { width: 420px; height: auto; border-top: none; border-left: 3px solid #e9e0d5; } }
+        
+        .log-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .log-item { padding: 15px; border-radius: 18px; font-size: 0.88rem; line-height: 1.6; background: white; border: 1px solid #eee; color: #666; animation: logFade 0.4s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .log-good { background: #f2faf3; border-color: var(--point); color: #5eb56d; }
+        .log-bad { background: #fff5f5; border-color: var(--danger); color: #d68389; }
+        .log-scandal { background: #fdf2f8; border-color: #ffb7d5; color: #d66ea3; font-weight: bold; }
+        .log-time { font-size: 0.7rem; color: #bbb; margin-bottom: 5px; display: block; }
+
+        @keyframes logFade { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 관계 리스트 */
+        .rel-box { background: #fff; padding: 18px; border-radius: 20px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #f5f5f5; }
+
+        /* 모달 (파스텔) */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 1000; backdrop-filter: blur(4px); }
+        .modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 35px; border-radius: 35px; width: 92%; max-width: 460px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+        
+        .btn { width: 100%; padding: 16px; border-radius: 18px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1rem; transition: 0.2s; }
+        .btn:active { transform: scale(0.97); }
+        .btn-p { background: var(--primary); color: white; }
+        .btn-s { background: var(--secondary); color: white; }
+        
+        select { width: 100%; padding: 14px; border-radius: 15px; border: 1px solid #eee; margin-top: 8px; background: #fafafa; color: #777; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2 style="margin:0; font-size:1.3rem; color:var(--text); letter-spacing:-1px;">☁️ <span style="color:var(--primary)">회사 경영</span> 시뮬레이션</h2>
+    <div style="display:flex; gap:10px;">
+        <button onclick="nextDay()" class="btn" style="margin:0; width:auto; padding:10px 18px; background:var(--secondary); color:white;">하루 진행</button>
+        <button id="autoBtn" onclick="toggleAuto()" class="btn" style="margin:0; width:auto; padding:10px 18px; background:var(--primary); color:white;">자동 시작</button>
+    </div>
+</div>
+
+<div class="finance-bar">
+    <span id="mDisp">💰 1,000,000원</span>
+    <span id="dDisp">📅 Day 1</span>
+    <span id="loanTag" style="color:var(--danger); display:none;">🚨 회생중</span>
+</div>
+
+<div class="nav">
+    <button id="n-emp" class="active" onclick="tab('emp')">우리 팀원</button>
+    <button id="n-rel" onclick="tab('rel')">관계 & 동호회</button>
+    <button id="n-sys" onclick="tab('sys')">회사 설정</button>
+</div>
+
+<div class="main-wrapper">
+    <div class="content-area">
+        <div id="p-emp" class="page active">
+            <div id="eGrid" class="grid"></div>
+            <div id="emptyMsg" style="text-align:center; padding:120px 0; color:#ccc;">
+                아직 팀원이 없어요.<br>아래 버튼을 눌러 새로운 인연을 찾아보세요!
+            </div>
+            <button onclick="hire()" class="btn btn-p" style="margin:40px auto; width:280px; display:block;">+ 팀원 랜덤 채용</button>
+        </div>
+
+        <div id="p-rel" class="page">
+            <h3 style="margin-top:0; color:#888;">🤝 사내 관계 현황</h3>
+            <div id="rList"></div>
+            <h3 style="margin-top:40px; color:#888;">🌈 동호회 활동</h3>
+            <div id="cList"></div>
+        </div>
+
+        <div id="p-sys" class="page">
+            <div style="background:white; padding:30px; border-radius:30px; margin-bottom:20px; border:1px solid #f0f0f0;">
+                <h4 style="margin:0; color:#888;">🏦 은행 대출 (회생 기능)</h4>
+                <p style="font-size:0.85rem; color:#bbb; margin-bottom:20px;">자금이 부족할 때 긴급 수혈을 받습니다. (이율 25%)</p>
+                <button onclick="takeLoan()" class="btn btn-s">대출 승인 요청</button>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <button onclick="saveData('HR')" class="btn" style="background:#e9e0d5; color:#8a8279;">HR 추출</button>
+                <button onclick="saveData('BIZ')" class="btn" style="background:#e9e0d5; color:#8a8279;">BIZ 추출</button>
+            </div>
+            <button onclick="location.reload()" class="btn" style="background:#f0f0f0; color:#bbb; margin-top:30px;">회사 폐업 (초기화)</button>
+        </div>
+    </div>
+
+    <div class="log-sidebar">
+        <div style="padding:18px 25px; color:#8a8279; font-weight:bold; border-bottom:1px solid #e9e0d5;">📋 활동 로그</div>
+        <div id="lBox" class="log-container"></div>
+    </div>
+</div>
+
+<div id="mOv" class="modal-overlay" onclick="clM()"><div class="modal" onclick="event.stopPropagation()">
+    <h3 id="mTitle" style="margin:0 0 20px 0; color:var(--text); text-align:center;">프로필 관리</h3>
+    <small style="color:#aaa;">사원 개명</small>
+    <input type="text" id="editName" class="name-input">
+
+    <div style="background:#fdfaf5; padding:20px; border-radius:25px; margin:20px 0;">
+        <strong style="font-size:0.9rem; color:#888;">🪄 인연 맺어주기</strong><br>
+        <select id="relTarget"></select>
+        <select id="relType"></select>
+        <button onclick="applyRel()" class="btn btn-s" style="padding:12px; font-size:0.9rem;">관계 고정</button>
+    </div>
+
+    <div style="background:#fff5f5; padding:20px; border-radius:25px; margin-bottom:20px;">
+        <strong style="font-size:0.9rem; color:var(--danger);">⚔️ 승진 배틀 매칭</strong><br>
+        <select id="btlTarget"></select>
+        <button onclick="startBattle()" class="btn" style="background:var(--danger); color:white; padding:12px; font-size:0.9rem;">배틀 시작</button>
+    </div>
+
+    <div style="display:flex; gap:10px;">
+        <button onclick="manualFire()" class="btn" style="background:#f0f0f0; color:#aaa; margin:0;">해고</button>
+        <button onclick="clM()" class="btn" style="background:var(--accent); color:white; margin:0;">닫기</button>
+    </div>
+</div></div>
+
+<script>
+    // [기본 로직 데이터 유지]
+    let st = { m: 1000000, d: 1, e: [], r: {}, loan: 0, over: false };
+    const RANKS = ["인턴", "사원", "대리", "과장", "차장", "부장", "이사", "CEO"];
+    const SALARY = [2200, 3800, 6500, 11000, 18000, 35000, 60000, 120000];
+    const TRAITS = ["천재", "워커홀릭", "사교가", "게으름", "트러블메이커", "야심가"];
+    const CLUBS = ["등산회", "낚시왕", "코딩클럽", "와인동호회", "뒷담화파티"];
+    const REL_TYPES = ["베프", "라이벌", "비밀연애", "혐관", "짝사랑", "불륜", "경계", "스승", "앙숙"];
+    const L_NAMES = ["김", "이", "박", "최", "정", "강", "조", "윤", "장", "임"];
+    const F_NAMES = ["민수", "지현", "도영", "서아", "하준", "유진", "은우", "수빈", "예준", "나은"];
+
+    const ACTIONS = [
+        "커피를 홀짝이며 창밖을 봅니다", "혁신적인 코드를 한 줄 써냈습니다", "게임하다 상사에게 딱 걸렸네요", "주식 창을 보며 한숨을 쉽니다",
+        "상사 뒷담화를 메신저로 하다 실수했습니다", "담배 타임이 조금 기네요", "화장실에서 스마트폰 중입니다", "열심히 업무 중인 척합니다",
+        "동료에게 사탕을 건넵니다", "회의 중에 예쁜 꿈을 꾸고 있습니다", "보고서를 아주 깔끔하게 정리했습니다", "멋진 기획안을 제출했습니다",
+        "거래처와 친절하게 통화 중입니다", "탕비실 과자를 몰래 챙겼습니다", "자기계발 인강을 듣고 있습니다", "퇴근만 손꼽아 기다립니다",
+        "서류를 정리하다 실수로 쏟았습니다", "외근 가서 예쁜 카페를 발견했습니다", "에어컨 밑에서 기지개를 켭니다", "복사기가 고장 나서 당황했습니다",
+        "신입사원에게 친절하게 설명 중입니다", "불륜 소문을 듣고 깜짝 놀랐습니다", "누군가에게 고백할지 고민 중입니다", "챗GPT로 보고서를 뚝딱 만듭니다"
+    ];
+
+    let selId = null, autoTimer = null;
+
+    function hire() {
+        const id = Date.now() + Math.random();
+        const name = L_NAMES[Math.floor(Math.random()*10)] + F_NAMES[Math.floor(Math.random()*10)];
+        const trait = TRAITS[Math.floor(Math.random()*TRAITS.length)];
+        const club = Math.random() < 0.3 ? CLUBS[Math.floor(Math.random()*CLUBS.length)] : null;
+        st.e.push({ id, n: name, rIdx: 0, trait, club, isFired: false, tech: 40 + Math.random()*40, sale: 40 + Math.random()*40, mtl: 50 + Math.random()*40, hp: 100 });
+        document.getElementById('emptyMsg').style.display = 'none';
+        log(`🌸 <b>${name}</b>님이 우리 회사의 새 식구가 되었습니다!`, "log-good");
+        updateUI();
+    }
+
+    function nextDay() {
+        if(st.over) return; st.d++;
+        let rev = 0; let exp = 0;
+        st.e.forEach(e => {
+            if(e.isFired) return;
+            rev += (e.tech * 5.2) + (e.sale * 6.5);
+            exp += SALARY[e.rIdx];
+            if(Math.random() < 0.25) {
+                const act = ACTIONS[Math.floor(Math.random()*ACTIONS.length)];
+                let type = "";
+                if(act.includes("혁신") || act.includes("깔끔") || act.includes("제출")) type = "log-good";
+                if(act.includes("걸렸") || act.includes("실수") || act.includes("당황")) type = "log-bad";
+                if(act.includes("불륜") || act.includes("고백")) type = "log-scandal";
+                log(`✨ <b>${e.n}</b>님이 ${act}.`, type);
+                const others = st.e.filter(o => o.id !== e.id && !o.isFired);
+                if(others.length > 0 && Math.random() < 0.1) autoRel(e.id, others[Math.floor(Math.random()*others.length)].id);
+            }
+        });
+        if(st.loan > 0) exp += (st.loan * 0.01);
+        st.m += (rev - exp);
+        if(Math.random() < 0.15) triggerEvent();
+        if(st.m < 0) {
+            const targets = st.e.filter(e => !e.isFired).sort((a,b) => (a.tech+a.sale)-(b.tech+b.sale));
+            if(targets[0]) { targets[0].isFired = true; log(`⚠️ 경영난으로 <b>${targets[0].n}</b>님이 회색 처리되었습니다.`, "log-bad"); }
+        }
+        checkEndings(); updateUI();
+    }
+
+    function autoRel(id1, id2) {
+        const key = [id1, id2].sort().join('-');
+        if(!st.r[key]) {
+            const type = REL_TYPES[Math.floor(Math.random()*REL_TYPES.length)];
+            st.r[key] = type;
+            if(type === "불륜") log(`🔥 [소문] <b>${getN(id1)}</b>와 <b>${getN(id2)}</b>님이 심상치 않아요!`, "log-scandal");
+        }
+    }
+
+    function triggerEvent() {
+        const evs = [
+            {t: "🌈 엔젤 투자자가 우리 회사를 눈여겨보고 자금을 지원했습니다!", m: 1800000, c: "log-good"},
+            {t: "💧 서버에 커피를 쏟아 복구 비용이 발생했습니다.", m: -400000, c: "log-bad"},
+            {t: "🍭 사내 스캔들이 일파만파 퍼져 사기가 저하됩니다.", m: -150000, c: "log-scandal"}
+        ];
+        const ev = evs[Math.floor(Math.random()*evs.length)];
+        st.m += ev.m; log(`📢 <b>[알림]</b> ${ev.t}`, ev.c);
+    }
+
+    function updateUI() {
+        document.getElementById('mDisp').innerText = `💰 ${Math.floor(st.m).toLocaleString()}원`;
+        document.getElementById('dDisp').innerText = `📅 Day ${st.d}`;
+        document.getElementById('loanTag').style.display = st.loan > 0 ? "inline" : "none";
+        document.getElementById('eGrid').innerHTML = st.e.map(e => `
+            <div class="card ${e.isFired?'fired':''}" onclick="opM(${e.id})">
+                <span class="rank-label">${RANKS[e.rIdx]}</span>
+                <input class="name-input" value="${e.n}" onchange="st.e.find(x=>x.id==${e.id}).n=this.value" onclick="event.stopPropagation()">
+                <div style="font-size:0.75rem; color:#aaa;">#${e.trait} | ${e.club || '무소속'}</div>
+                <div class="stat-grid">
+                    ${drawStat('🛠️ 기술', e.tech, 'var(--primary)')}
+                    ${drawStat('🤝 영업', e.sale, 'var(--secondary)')}
+                    ${drawStat('🧠 멘탈', e.mtl, 'var(--accent)')}
+                    ${drawStat('❤️ 체력', e.hp, 'var(--point)')}
+                </div>
+            </div>
+        `).join('');
+        let rH = "";
+        for(let k in st.r) {
+            const [i1, i2] = k.split('-');
+            const e1 = st.e.find(e => e.id == i1); const e2 = st.e.find(e => e.id == i2);
+            if(e1 && e2 && !e1.isFired && !e2.isFired) rH += `<div class="rel-box"><span><b>${e1.n}</b> & <b>${e2.n}</b></span><span style="color:var(--accent); font-weight:bold;">${st.r[k]}</span></div>`;
+        }
+        document.getElementById('rList').innerHTML = rH || "<p style='text-align:center; color:#ccc;'>아직 아무 인연도 맺어지지 않았어요.</p>";
+        document.getElementById('cList').innerHTML = CLUBS.map(club => {
+            const members = st.e.filter(e => e.club === club && !e.isFired).map(e => e.n);
+            return members.length > 0 ? `<div style="padding:15px; background:white; border-radius:15px; margin-bottom:8px; font-size:0.9rem; border:1px solid #f9f9f9;"><b>${club}:</b> ${members.join(', ')}</div>` : '';
+        }).join('');
+    }
+
+    function drawStat(label, val, col) { return `<div class="stat-item">${label}<div class="bar-bg"><div class="bar-fill" style="width:${Math.min(val,100)}%; background:${col}"></div></div></div>`; }
+    function log(m, c="") {
+        const lBox = document.getElementById('lBox');
+        const d = document.createElement('div');
+        d.className = `log-item ${c}`;
+        d.innerHTML = `<span class="log-time">Day ${st.d}</span>${m}`;
+        lBox.appendChild(d); lBox.scrollTop = lBox.scrollHeight;
+    }
+    function opM(id) {
+        const e = st.e.find(e => e.id === id); if(!e || e.isFired) return;
+        selId = id; document.getElementById('editName').value = e.n;
+        const others = st.e.filter(e => e.id !== id && !e.isFired);
+        document.getElementById('relTarget').innerHTML = others.map(o => `<option value="${o.id}">${o.n}</option>`).join('');
+        document.getElementById('btlTarget').innerHTML = others.map(o => `<option value="${o.id}">${o.n}</option>`).join('');
+        document.getElementById('relType').innerHTML = REL_TYPES.map(r => `<option value="${r}">${r}</option>`).join('');
+        document.getElementById('mOv').style.display = 'block';
+    }
+    function applyRel() {
+        const tId = document.getElementById('relTarget').value; const type = document.getElementById('relType').value;
+        if(tId) { st.r[[selId, tId].sort().join('-')] = type; log(`🪄 <b>${getN(selId)}</b>와 <b>${getN(tId)}</b>의 인연을 <b>${type}</b>(으)로 묶어주었습니다.`, "log-good"); clM(); updateUI(); }
+    }
+    function startBattle() {
+        const p1 = st.e.find(e => e.id === selId); const p2 = st.e.find(e => e.id == document.getElementById('btlTarget').value);
+        if(!p1 || !p2) return;
+        if(p1.tech + p1.sale + Math.random()*50 > p2.tech + p2.sale + Math.random()*50) {
+            p1.rIdx = Math.min(7, p1.rIdx + 1); p2.rIdx = Math.max(0, p2.rIdx - 1);
+            log(`⚔️ 배틀 승리! <b>${p1.n}</b>님이 승진하고 <b>${p2.n}</b>님은 강등되었습니다.`, "log-good");
+        } else { log(`⚔️ 배틀 패배! <b>${p1.n}</b>님의 도전이 실패로 끝났습니다.`, "log-bad"); }
+        clM(); updateUI();
+    }
+    function takeLoan() { st.m += 2000000; st.loan += 2500000; log("🏦 대출금이 입금되었습니다. 열심히 경영해보아요!", "log-good"); updateUI(); }
+    function manualFire() { const e = st.e.find(e => e.id === selId); if(e) { e.isFired = true; log(`⚠️ <b>${e.n}</b>님이 회사를 떠나게 되었습니다.`, "log-bad"); clM(); updateUI(); } }
+    function checkEndings() {
+        if(st.m < -5000000) { st.over = true; alert("회사가 파산했습니다. 다시 시작해보세요!"); location.reload(); }
+        else if(st.m > 200000000) { st.over = true; alert("축하합니다! 업계 1위 기업이 되었습니다!"); location.reload(); }
+    }
+    function getN(id) { const e = st.e.find(x => x.id == id); return e ? e.n : "누군가"; }
+    function clM() { document.getElementById('mOv').style.display = 'none'; }
+    function tab(t) { document.querySelectorAll('.page, .nav button').forEach(x => x.classList.remove('active')); document.getElementById(`p-${t}`).classList.add('active'); document.getElementById(`n-${t}`).classList.add('active'); }
+    function toggleAuto() { if(autoTimer) { clearInterval(autoTimer); autoTimer = null; document.getElementById('autoBtn').innerText = "자동 시작"; } else { autoTimer = setInterval(nextDay, 1000); document.getElementById('autoBtn').innerText = "중지"; } }
+    function saveData(t) { const d = t==='HR'?st.e:st; const b = new Blob([JSON.stringify(d)], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `${t}_DATA.json`; a.click(); }
+    updateUI();
+</script>
+</body>
+</html>
